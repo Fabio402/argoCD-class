@@ -11,7 +11,7 @@ spec:
     path: manifests
   destination:
     server: https://kubernetes.default.svc
-    namespace: demo
+    namespace: teste
   syncPolicy:
     automated:
       prune: true
