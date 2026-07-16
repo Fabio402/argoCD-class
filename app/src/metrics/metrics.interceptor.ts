@@ -1,6 +1,7 @@
 import {
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
@@ -19,11 +20,20 @@ export class MetricsInterceptor implements NestInterceptor {
     const method: string = req.method;
     const end = this.metrics.httpDuration.startTimer({ method, route });
 
+    const record = (status: string) => {
+      this.metrics.httpRequests.inc({ method, route, status });
+      end({ status });
+    };
+
     return next.handle().pipe(
-      tap(() => {
-        const status = String(http.getResponse().statusCode);
-        this.metrics.httpRequests.inc({ method, route, status });
-        end({ status });
+      tap({
+        next: () => record(String(http.getResponse().statusCode)),
+        // Na falha o exception filter ainda não escreveu o status na response,
+        // então o status vem da própria exceção.
+        error: (err: unknown) =>
+          record(
+            String(err instanceof HttpException ? err.getStatus() : 500),
+          ),
       }),
     );
   }

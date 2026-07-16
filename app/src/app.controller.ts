@@ -1,4 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
@@ -23,5 +27,11 @@ export class AppController {
       Math.sqrt(Math.random());
     }
     return { status: 'load generated', durationMs: 500 };
+  }
+
+  @Get('error')
+  error() {
+    // Endpoint para gerar 5xx e testar o painel de taxa de erro
+    throw new InternalServerErrorException('Erro proposital para teste');
   }
 }
