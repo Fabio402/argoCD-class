@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nest-api
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: nest-api
+          env:
+            - name: APP_ENV
+              value: "master"
+            - name: APP_VERSION
+              value: "master"

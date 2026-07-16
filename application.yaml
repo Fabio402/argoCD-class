@@ -1,21 +1,41 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: aula-geovane
+  name: nest-api-master
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/Fabio402/argoCD-class.git
-    targetRevision: HEAD
-    path: manifests
+    targetRevision: master
+    path: manifests/overlays/master
   destination:
     server: https://kubernetes.default.svc
-    namespace: teste
+    namespace: nest-api-master
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
- 
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nest-api-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Fabio402/argoCD-class.git
+    targetRevision: dev
+    path: manifests/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nest-api-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
