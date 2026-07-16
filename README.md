@@ -1,6 +1,6 @@
 # ArgoCD Class — NestJS API no Minikube
 
-API base em NestJS com deploy em dois ambientes (`master` e `dev`) via Kustomize, com autoscaling (HPA) por CPU e memória no ambiente `master`.
+API base em NestJS com deploy em dois ambientes (`main` e `dev`) via Kustomize, com autoscaling (HPA) por CPU e memória no ambiente `main`.
 
 ## Estrutura
 
@@ -10,7 +10,7 @@ manifests/
   base/                     # Deployment + Service (comum aos ambientes)
   overlays/
     dev/                    # namespace nest-api-dev, tag dev, 1 réplica
-    master/                 # namespace nest-api-master, tag master, HPA (CPU 70% / memória 80%)
+     main/                    # namespace nest-api-main, tag main, HPA (CPU 70% / memória 80%)
 application.yaml            # 2 Applications do ArgoCD (uma por branch)
 deploy.sh                   # Deploy manual via kubectl (sem ArgoCD)
 ```
@@ -19,8 +19,8 @@ deploy.sh                   # Deploy manual via kubectl (sem ArgoCD)
 
 ```bash
 minikube start
-./deploy.sh          # deploya dev e master
-./deploy.sh master   # ou apenas um ambiente
+./deploy.sh          # deploya dev e main
+./deploy.sh main   # ou apenas um ambiente
 ```
 
 O script habilita o `metrics-server`, builda a imagem dentro do daemon Docker do minikube (`eval $(minikube docker-env)`) e aplica os overlays com `kubectl apply -k`.
@@ -28,7 +28,7 @@ O script habilita o `metrics-server`, builda a imagem dentro do daemon Docker do
 ## Testando
 
 ```bash
-kubectl port-forward svc/nest-api 8080:80 -n nest-api-master
+kubectl port-forward svc/nest-api 8080:80 -n nest-api-main
 curl http://localhost:8080/          # info do ambiente
 curl http://localhost:8080/health    # health check
 curl http://localhost:8080/load     # gera carga de CPU (para testar o HPA)
@@ -38,13 +38,13 @@ Gerar carga contínua para ver o HPA escalar:
 
 ```bash
 while true; do curl -s http://localhost:8080/load > /dev/null; done
-kubectl get hpa -n nest-api-master -w
+kubectl get hpa -n nest-api-main -w
 ```
 
 ## Observando com o k9s
 
 ```bash
-k9s -n nest-api-master
+k9s -n nest-api-main
 ```
 
 Atalhos úteis: `:pods`, `:hpa`, `:deploy`, `l` (logs), `d` (describe), `0` (todos os namespaces).
@@ -55,7 +55,7 @@ Cada branch tem sua Application no ArgoCD (`application.yaml`):
 
 | Branch  | Overlay                     | Namespace         | Escala                 |
 |---------|-----------------------------|-------------------|------------------------|
-| master  | `manifests/overlays/master` | `nest-api-master` | HPA 2–6 (CPU/memória)  |
+| main    | `manifests/overlays/main` | `nest-api-main` | HPA 2–6 (CPU/memória)  |
 | dev     | `manifests/overlays/dev`    | `nest-api-dev`    | 1 réplica fixa         |
 
 Para usar com ArgoCD:
