@@ -4,6 +4,7 @@ namespace: nest-api-main
 resources:
   - ../../base
   - hpa.yaml
+  - servicemonitor.yaml
 images:
   - name: nest-api
     newTag: main
