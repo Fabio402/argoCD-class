@@ -3,6 +3,7 @@ kind: ServiceMonitor
 metadata:
   name: nest-api
   labels:
+    app: nest-api
     release: monitoring
 spec:
   selector:
@@ -14,4 +15,10 @@ spec:
   endpoints:
     - port: http
       path: /metrics
+      scheme: http
       interval: 15s
+      scrapeTimeout: 10s
+      relabelings:
+        # Sem isso o "instance" vira IP:porta e fica ilegível no Grafana.
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: instance

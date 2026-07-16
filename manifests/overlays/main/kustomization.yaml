@@ -5,6 +5,7 @@ resources:
   - ../../base
   - hpa.yaml
   - servicemonitor.yaml
+  - grafana-dashboard.yaml
 images:
   - name: nest-api
     newTag: main

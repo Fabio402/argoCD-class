@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nest-api-dashboard
+  labels:
+    app: nest-api
+    grafana_dashboard: "1"
+data:
+  nest-api.json: |
+    {
+      "title": "Nest API - main",
+      "uid": "nest-api-main",
+      "tags": ["nest-api", "argocd"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "15s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": {}
+          },
+          {
+            "name": "instance",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "${datasource}" },
+            "query": "label_values(http_requests_total{namespace=\"nest-api-main\"}, instance)",
+            "includeAll": true,
+            "multi": true,
+            "current": { "text": "All", "value": "$__all" },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Requisições por segundo",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "unit": "reqps", "decimals": 2 },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m]))"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Taxa de erro (5xx)",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "decimals": 2,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "orange", "value": 0.01 },
+                  { "color": "red", "value": 0.05 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": { "colorMode": "background" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_requests_total{namespace=\"nest-api-main\", instance=~\"$instance\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])), 0.001)"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Latência p95",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "unit": "s", "decimals": 3 },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])) by (le))"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Pods ativos",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "count(up{namespace=\"nest-api-main\", job=\"nest-api\"} == 1)"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Throughput por rota",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "fillOpacity": 10, "showPoints": "never" }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (route, method) (rate(http_requests_total{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m]))",
+              "legendFormat": "{{method}} {{route}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Latência por quantil",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "fillOpacity": 0, "showPoints": "never" }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])) by (le))",
+              "legendFormat": "p50"
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])) by (le))",
+              "legendFormat": "p95"
+            },
+            {
+              "refId": "C",
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])) by (le))",
+              "legendFormat": "p99"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Respostas por status",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "fillOpacity": 40, "stacking": { "mode": "normal" }, "showPoints": "never" }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (status) (rate(http_requests_total{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m]))",
+              "legendFormat": "{{status}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Latência p95 por rota",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "fillOpacity": 0, "showPoints": "never" }
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])) by (le, route))",
+              "legendFormat": "{{route}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU do processo Node",
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "unit": "percentunit", "custom": { "fillOpacity": 10, "showPoints": "never" } },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(process_cpu_seconds_total{namespace=\"nest-api-main\", instance=~\"$instance\"}[5m])",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Heap em uso",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "unit": "bytes", "custom": { "fillOpacity": 10, "showPoints": "never" } },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "nodejs_heap_size_used_bytes{namespace=\"nest-api-main\", instance=~\"$instance\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Event loop lag (p99)",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "unit": "s", "custom": { "fillOpacity": 0, "showPoints": "never" } },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "nodejs_eventloop_lag_p99_seconds{namespace=\"nest-api-main\", instance=~\"$instance\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        }
+      ]
+    }

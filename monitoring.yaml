@@ -13,6 +13,13 @@ spec:
       values: |
         grafana:
           adminPassword: admin123
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+              # O dashboard do nest-api vive no namespace da app, não no do Grafana.
+              searchNamespace: ALL
         prometheus:
           prometheusSpec:
             serviceMonitorSelectorNilUsesHelmValues: false
