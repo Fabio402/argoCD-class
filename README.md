@@ -66,6 +66,20 @@ kubectl apply -f application.yaml
 
 O ArgoCD sincroniza automaticamente (`automated`, `prune`, `selfHeal`) cada namespace com a respectiva branch do repositório.
 
+## Acessando a UI do ArgoCD (porta 8081)
+
+O `argocd-server` é `ClusterIP` (não exposto para fora). Para abrir no navegador em HTTP puro na porta 8081:
+
+```bash
+./enable-insecure-argo.sh   # 1x por cluster: aplica server.insecure e reinicia o server
+./access-argo.sh            # port-forward 8081 -> 80 e mostra a senha do admin
+# abra http://localhost:8081  (usuário: admin)
+```
+
+- `argocd/argocd-cmd-params-cm.yaml` versiona o `server.insecure: "true"` (HTTP sem redirect para HTTPS).
+- Válido só para ambiente local/aula — em produção, use Ingress com TLS.
+- O `port-forward` cai ao fechar o terminal ou reiniciar; rode `./access-argo.sh` de novo.
+
 ## Rollback automático por taxa de erro (Argo Rollouts)
 
 O ArgoCD sozinho não faz rollback baseado em métricas — ele só reconcilia o Git. Quem faz isso é o **Argo Rollouts**, que no overlay `main` substitui o `Deployment` por um `Rollout` canary com análise via Prometheus.
