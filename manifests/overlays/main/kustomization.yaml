@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: nest-api-main
 resources:
   - ../../base
+  - rollout.yaml
+  - analysis-template.yaml
   - hpa.yaml
   - servicemonitor.yaml
   - grafana-dashboard.yaml
@@ -10,7 +12,14 @@ images:
   - name: nest-api
     newTag: main
 patches:
-  - path: patch-env.yaml
-    target:
+  # No main a app roda como Rollout (rollout.yaml), então removemos o
+  # Deployment que vem da base. O Service da base continua sendo usado.
+  - target:
       kind: Deployment
       name: nest-api
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: nest-api

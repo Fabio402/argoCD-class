@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: error-rate
+spec:
+  metrics:
+    - name: error-rate
+      # Mede a cada 30s por 3 minutos (6 amostras) durante o rollout.
+      interval: 30s
+      count: 6
+      # Basta uma medição >= 20% para abortar o rollout e voltar à versão estável.
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090
+          # Fração de respostas 5xx sobre o total, na janela de 1 minuto.
+          # Sem tráfego a query retorna NaN; como só há failureCondition,
+          # NaN >= 0.2 é falso e a medição é considerada bem-sucedida.
+          query: |
+            sum(rate(http_requests_total{status=~"5..", namespace="nest-api-main"}[1m]))
+            /
+            sum(rate(http_requests_total{namespace="nest-api-main"}[1m]))
+      failureCondition: result[0] >= 0.2

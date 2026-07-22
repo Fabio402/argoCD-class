@@ -65,3 +65,33 @@ kubectl apply -f application.yaml
 ```
 
 O ArgoCD sincroniza automaticamente (`automated`, `prune`, `selfHeal`) cada namespace com a respectiva branch do repositório.
+
+## Rollback automático por taxa de erro (Argo Rollouts)
+
+O ArgoCD sozinho não faz rollback baseado em métricas — ele só reconcilia o Git. Quem faz isso é o **Argo Rollouts**, que no overlay `main` substitui o `Deployment` por um `Rollout` canary com análise via Prometheus.
+
+Como funciona a cada nova versão sincronizada no `main`:
+
+1. O `Rollout` sobe a nova versão gradualmente (25% → 50% → 100%, com pausas).
+2. Em paralelo, a `AnalysisTemplate` `error-rate` consulta o Prometheus a cada 30s:
+   `sum(rate(http_requests_total{status=~"5.."}[1m])) / sum(rate(http_requests_total[1m]))`.
+3. Se a taxa de erro **≥ 20%**, a análise falha, o rollout é **abortado** e o Rollouts **volta automaticamente para a versão estável anterior**.
+
+Instalação do controller (Application dedicada):
+
+```bash
+kubectl apply -f rollouts.yaml
+```
+
+Testando o rollback:
+
+```bash
+# gera 5xx contínuos para estourar os 20%
+kubectl port-forward svc/nest-api 8080:80 -n nest-api-main
+while true; do curl -s http://localhost:8080/error > /dev/null; done
+
+# acompanhe o rollout abortar e voltar à versão estável
+kubectl argo rollouts get rollout nest-api -n nest-api-main --watch
+```
+
+> O HPA no `main` mira o `Rollout` (`scaleTargetRef.kind: Rollout`), não mais o `Deployment`.

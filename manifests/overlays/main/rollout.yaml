@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: nest-api
+  labels:
+    app: nest-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nest-api
+  template:
+    metadata:
+      labels:
+        app: nest-api
+    spec:
+      containers:
+        - name: nest-api
+          image: nest-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: APP_ENV
+              value: "main"
+            - name: APP_VERSION
+              value: "main"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+  strategy:
+    canary:
+      # Análise em segundo plano durante todo o rollout (a partir do passo 1).
+      # Se a taxa de erro passar de 20%, o rollout é abortado e o Rollouts
+      # volta automaticamente para a ReplicaSet estável anterior.
+      analysis:
+        templates:
+          - templateName: error-rate
+        startingStep: 1
+      steps:
+        - setWeight: 25
+        - pause: { duration: 1m }
+        - setWeight: 50
+        - pause: { duration: 1m }
+        - setWeight: 100
